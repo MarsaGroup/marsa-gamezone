@@ -3,9 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Marsa Group</title>
+  <title>Marsa Group: Trading Quest</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" type="image/x-icon" href="https://www.netlify.com/favicon.ico">
+  <style>
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    @keyframes slideIn { 0% { transform: translateX(-100%); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+    @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes ripple { 0% { transform: scale(0); opacity: 1; } 100% { transform: scale(4); opacity: 0; } }
+    @keyframes moveVehicle { 0% { transform: translateX(-20px); } 50% { transform: translateX(20px); } 100% { transform: translateX(-20px); } }
+    @keyframes sailShip { 0% { transform: translateY(0); } 50% { transform: translateY(10px); } 100% { transform: translateY(0); } }
+    @keyframes flyCargo { 0% { transform: translateX(0); } 100% { transform: translateX(50px); } }
+  </style>
 </head>
 <body>
   <div id="root"></div>
@@ -13,158 +21,696 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script type="text/babel">
-    const { useState } = React;
+    const { useState, useEffect } = React;
 
     const App = () => {
+      const [users, setUsers] = useState([]);
       const [products, setProducts] = useState([]);
+      const [transactions, setTransactions] = useState([]);
+      const [workOrders, setWorkOrders] = useState([]);
+      const [offers, setOffers] = useState([]);
+      const [trackingLinks, setTrackingLinks] = useState([]);
+      const [disputes, setDisputes] = useState([]);
+      const [view, setView] = useState("register");
+      const [points, setPoints] = useState({});
+      const [leaderboard, setLeaderboard] = useState([]);
+      const [newUserRole, setNewUserRole] = useState("");
+      const [newUserName, setNewUserName] = useState("");
+      const [newUserContact, setNewUserContact] = useState("");
+      const [newUserAddress, setNewUserAddress] = useState("");
       const [newProductName, setNewProductName] = useState("");
       const [newProductPrice, setNewProductPrice] = useState("");
       const [newProductDesc, setNewProductDesc] = useState("");
-      const [transactions, setTransactions] = useState([]);
-      const [view, setView] = useState("seller");
-      const [instructions, setInstructions] = useState([]);
+      const [currentUser, setCurrentUser] = useState(null);
+      const [surveyReport, setSurveyReport] = useState("");
+      const [draftPO, setDraftPO] = useState(null);
+      const [progress, setProgress] = useState({});
+      const [otp, setOtp] = useState("");
+      const [generatedOtp, setGeneratedOtp] = useState(null);
+
+      const roles = ["Supplier", "Procurer", "Surveyor", "Transporter", "Logistics", "CHA", "Insurance"];
+
+      const characterAvatars = {
+        Supplier: "?????",
+        Procurer: "??",
+        Admin: "?????",
+        Surveyor: "??",
+        Transporter: "??",
+        Logistics: "??",
+        CHA: "??",
+        Insurance: "???",
+        Arbitrator: "??",
+        Accounts: "??"
+      };
+
+      const roleEnvironments = {
+        Supplier: "?? Shop/Warehouse",
+        Procurer: "?? Buyer Shop/Factory",
+        Admin: "?? Admin Office",
+        Surveyor: "?? Surveyor Office",
+        Transporter: "?? Transporter Vehicle",
+        Logistics: "?? Logistics Ship",
+        CHA: "?? CHA Customs Office",
+        Insurance: "?? Insurance Office",
+        Arbitrator: "?? Arbitrator Court",
+        Accounts: "?? Accounts Office"
+      };
+
+      const appointTeam = (role) => {
+        const newId = users.length + 1;
+        const vendorCode = `VC-${newId}-${role.slice(0, 3).toUpperCase()}`;
+        setUsers([...users, { id: newId, role, vendorCode, status: "Appointed" }]);
+        setTransactions([...transactions, `Owner appointed ${role}`]);
+        setPoints({ ...points, [vendorCode]: 0 });
+      };
+
+      const registerUser = () => {
+        if (newUserRole && newUserName && newUserContact && newUserAddress) {
+          const newId = users.length + 1;
+          const vendorCode = `VC-${newId}-${newUserRole.slice(0, 3).toUpperCase()}`;
+          setUsers([...users, { 
+            id: newId, 
+            role: newUserRole, 
+            vendorCode, 
+            name: newUserName, 
+            contact: newUserContact, 
+            address: newUserAddress, 
+            status: "Registered" 
+          }]);
+          setTransactions([...transactions, `${newUserRole} registered with Vendor Code: ${vendorCode}`]);
+          setPoints({ ...points, [vendorCode]: 50 });
+          updateLeaderboard(vendorCode, 50);
+          setCurrentUser({ id: newId, role: newUserRole, vendorCode, name: newUserName, contact: newUserContact, address: newUserAddress });
+          setNewUserRole("");
+          setNewUserName("");
+          setNewUserContact("");
+          setNewUserAddress("");
+          setView("dashboard");
+        }
+      };
+
+      const loginUser = (vendorCode) => {
+        const user = users.find(u => u.vendorCode === vendorCode);
+        if (user) {
+          setCurrentUser(user);
+          setTransactions([...transactions, `${user.role} logged in with Vendor Code: ${vendorCode}`]);
+          setView("dashboard");
+        }
+      };
 
       const addProduct = () => {
-        if (newProductName && newProductPrice && newProductDesc) {
+        if (newProductName && newProductPrice && newProductDesc && currentUser) {
           const newId = products.length + 1;
+          const consignmentNumber = `CN-${newId}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
           setProducts([...products, {
             id: newId,
             name: newProductName,
             price: parseInt(newProductPrice),
             description: newProductDesc,
-            sold: false
+            sellerId: currentUser.id,
+            status: "Pending Approval",
+            consignmentNumber
           }]);
-          setTransactions([...transactions, `Seller added product: ${newProductName}`]);
+          setTransactions([...transactions, `${currentUser.role} added product: ${newProductName} (Consignment: ${consignmentNumber}) at ${roleEnvironments.Supplier}`]);
+          setPoints({ ...points, [currentUser.vendorCode]: points[currentUser.vendorCode] + 20 });
+          updateLeaderboard(currentUser.vendorCode, points[currentUser.vendorCode] + 20);
           setNewProductName("");
           setNewProductPrice("");
           setNewProductDesc("");
         }
       };
 
-      const buyProduct = (id) => {
+      const approveProduct = (id) => {
+        setProducts(products.map(p => (p.id === id ? { ...p, status: "Approved" } : p)));
         const product = products.find(p => p.id === id);
-        if (product && !product.sold) {
-          setProducts(products.map(p => (p.id === id ? { ...p, sold: true } : p)));
-          setTransactions([...transactions, `Buyer bought ${product.name} for $${product.price}`]);
-          setInstructions([...instructions, `Surveyor: Inspect ${product.name}`, `Logistics: Ship ${product.name}`, `Custom: Clear ${product.name}`, `Insurance: Insure ${product.name}`]);
+        const seller = users.find(u => u.id === product.sellerId);
+        setTransactions([...transactions, `Admin approved product: ${product.name} at ${roleEnvironments.Admin}`]);
+        setPoints({ ...points, [seller.vendorCode]: points[seller.vendorCode] + 100 });
+        updateLeaderboard(seller.vendorCode, points[seller.vendorCode] + 100);
+        assignSurveyor(product);
+      };
+
+      const assignSurveyor = (product) => {
+        const surveyor = users.find(u => u.role === "Surveyor" && u.status === "Registered");
+        const seller = users.find(u => u.id === product.sellerId);
+        if (surveyor && seller) {
+          const workOrderId = workOrders.length + 1;
+          setWorkOrders([...workOrders, { id: workOrderId, productId: product.id, surveyorId: surveyor.id, sellerAddress: seller.address, status: "Assigned" }]);
+          setTransactions([...transactions, `Surveyor assigned for ${product.name} at ${seller.address} (${roleEnvironments.Supplier})`]);
+          setPoints({ ...points, [surveyor.vendorCode]: points[surveyor.vendorCode] + 80 });
+          updateLeaderboard(surveyor.vendorCode, points[surveyor.vendorCode] + 80);
         }
       };
 
-      const addInstruction = (team, message) => {
-        setInstructions([...instructions, `${team}: ${message}`]);
-        setTransactions([...transactions, `Admin instructed ${team}: ${message}`]);
+      const submitSurveyReport = (workOrderId) => {
+        const currentDateTime = new Date().toLocaleString();
+        setWorkOrders(workOrders.map(wo => (wo.id === workOrderId ? { ...wo, status: "Completed", report: surveyReport, imageTimeDate: currentDateTime } : wo)));
+        const workOrder = workOrders.find(wo => wo.id === workOrderId);
+        const product = products.find(p => p.id === workOrder.productId);
+        setProducts(products.map(p => (p.id === workOrder.productId ? { ...p, status: "Surveyed", sealed: true } : p)));
+        setTransactions([...transactions, `Surveyor submitted report for ${product.name} with timestamp: ${currentDateTime} at ${roleEnvironments.Surveyor}`]);
+        setPoints({ ...points, [currentUser.vendorCode]: points[currentUser.vendorCode] + 120 });
+        updateLeaderboard(currentUser.vendorCode, points[currentUser.vendorCode] + 120);
+        setSurveyReport("");
+      };
+
+      const adminAllowSurvey = (workOrderId) => {
+        const workOrder = workOrders.find(wo => wo.id === workOrderId);
+        const product = products.find(p => p.id === workOrder.productId);
+        setProducts(products.map(p => (p.id === workOrder.productId ? { ...p, status: "Survey Approved" } : p)));
+        setTransactions([...transactions, `Admin allowed survey for ${product.name} at ${roleEnvironments.Admin}`]);
+      };
+
+      const buyProduct = (id) => {
+        const product = products.find(p => p.id === id);
+        if (product && product.status === "Survey Approved") {
+          setProducts(products.map(p => (p.id === id ? { ...p, status: "Sold", buyerId: currentUser.id } : p)));
+          setTransactions([...transactions, `Procurer bought ${product.name} for $${product.price} at ${roleEnvironments.Procurer}`]);
+          setPoints({ ...points, [currentUser.vendorCode]: points[currentUser.vendorCode] + 150 });
+          updateLeaderboard(currentUser.vendorCode, points[currentUser.vendorCode] + 150);
+        }
+      };
+
+      const confirmAndPay = (productId) => {
+        const product = products.find(p => p.id === productId);
+        setTransactions([...transactions, `Procurer confirmed and paid for ${product.name} at ${roleEnvironments.Procurer}`]);
+        setPoints({ ...points, [currentUser.vendorCode]: points[currentUser.vendorCode] + 200 });
+        updateLeaderboard(currentUser.vendorCode, points[currentUser.vendorCode] + 200);
+        createDraftPO(product);
+      };
+
+      const createDraftPO = (product) => {
+        const seller = users.find(u => u.id === product.sellerId);
+        setDraftPO({ productId: product.id, sellerId: seller.id, price: product.price, status: "Draft", consignmentNumber: product.consignmentNumber });
+        setTransactions([...transactions, `Admin created draft PO for ${product.name} (Consignment: ${product.consignmentNumber}) at ${roleEnvironments.Admin}`]);
+        requestOffers(product);
+      };
+
+      const requestOffers = (product) => {
+        const teams = ["Insurance", "CHA", "Logistics", "Transporter"];
+        teams.forEach(role => {
+          const teamMember = users.find(u => u.role === role && u.status === "Registered");
+          if (teamMember) {
+            setOffers([...offers, { team: role, productId: product.id, status: "Requested" }]);
+            setTransactions([...transactions, `Admin requested offer from ${role} for ${product.name} at ${roleEnvironments.Admin}`]);
+          }
+        });
+      };
+
+      const submitOffer = (productId, offerDetails) => {
+        setOffers(offers.map(o => (o.productId === productId && o.team === currentUser.role ? { ...o, status: "Submitted", details: offerDetails } : o)));
+        const product = products.find(p => p.id === productId);
+        setTransactions([...transactions, `${currentUser.role} submitted offer for ${product.name} at ${roleEnvironments[currentUser.role]}`]);
+        setPoints({ ...points, [currentUser.vendorCode]: points[currentUser.vendorCode] + 50 });
+        updateLeaderboard(currentUser.vendorCode, points[currentUser.vendorCode] + 50);
+      };
+
+      const approveOffer = (offerId) => {
+        const offer = offers[offerId];
+        const product = products.find(p => p.id === offer.productId);
+        setOffers(offers.map((o, idx) => (idx === offerId ? { ...o, status: "Approved" } : o)));
+        setTransactions([...transactions, `Admin approved ${offer.team}'s offer for ${product.name} at ${roleEnvironments.Admin}`]);
+        if (offer.team === "Transporter" || offer.team === "Logistics") {
+          assignTransporter(product, "A-side");
+        }
+      };
+
+      const assignTransporter = (product, side) => {
+        const transporter = users.find(u => (u.role === "Transporter" || u.role === "Logistics") && u.status === "Registered");
+        const seller = users.find(u => u.id === product.sellerId);
+        if (transporter) {
+          const trackingId = `TRK-${product.consignmentNumber}-${side}`;
+          setTrackingLinks([...trackingLinks, { id: trackingId, productId: product.id, location: `${side === "A-side" ? seller.address : "Port"}`, status: "In Transit" }]);
+          setTransactions([...transactions, `${transporter.role} (${side}) assigned to load sealed product ${product.name} at ${seller.address} (${roleEnvironments.Supplier}) (Tracking: ${trackingId})`]);
+          setPoints({ ...points, [transporter.vendorCode]: points[transporter.vendorCode] + 100 });
+          updateLeaderboard(transporter.vendorCode, points[transporter.vendorCode] + 100);
+          setProgress({ ...progress, [trackingId]: { location: `${side === "A-side" ? seller.address : "Port"}`, status: "In Transit" } });
+        }
+      };
+
+      const updateProgress = (trackingId, newLocation) => {
+        setTrackingLinks(trackingLinks.map(tl => (tl.id === trackingId ? { ...tl, location: newLocation } : tl)));
+        setProgress({ ...progress, [trackingId]: { ...progress[trackingId], location: newLocation } });
+        setTransactions([...transactions, `Progress updated for ${trackingId}: Location - ${newLocation} at ${roleEnvironments[currentUser.role]}`]);
+        setPoints({ ...points, [currentUser.vendorCode]: points[currentUser.vendorCode] + 30 });
+        updateLeaderboard(currentUser.vendorCode, points[currentUser.vendorCode] + 30);
+      };
+
+      const handoverToCHA = (trackingId) => {
+        const tracking = trackingLinks.find(tl => tl.id === trackingId);
+        const product = products.find(p => p.id === tracking.productId);
+        const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
+        setGeneratedOtp(otpCode);
+        setTrackingLinks(trackingLinks.map(tl => (tl.id === trackingId ? { ...tl, status: "At Port", handover: "Pending" } : tl)));
+        setTransactions([...transactions, `Logistics handed over ${product.name} to CHA at port (${roleEnvironments.CHA}) (OTP: ${otpCode})`]);
+      };
+
+      const chaVerifyOtp = (trackingId) => {
+        const tracking = trackingLinks.find(tl => tl.id === trackingId);
+        if (otp === generatedOtp) {
+          setTrackingLinks(trackingLinks.map(tl => (tl.id === trackingId ? { ...tl, status: "Handed Over", handover: "Completed" } : tl)));
+          setTransactions([...transactions, `CHA verified OTP for ${trackingId} at ${roleEnvironments.CHA}`]);
+          setPoints({ ...points, [currentUser.vendorCode]: points[currentUser.vendorCode] + 80 });
+          updateLeaderboard(currentUser.vendorCode, points[currentUser.vendorCode] + 80);
+          assignTransporter(products.find(p => p.id === tracking.productId), "B-side");
+        } else {
+          setTransactions([...transactions, `CHA failed OTP verification for ${trackingId} at ${roleEnvironments.CHA}`]);
+        }
+        setOtp("");
+        setGeneratedOtp(null);
+      };
+
+      const buyerReceive = (trackingId) => {
+        const tracking = trackingLinks.find(tl => tl.id === trackingId);
+        const product = products.find(p => p.id === tracking.productId);
+        const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
+        setGeneratedOtp(otpCode);
+        setTrackingLinks(trackingLinks.map(tl => (tl.id === trackingId ? { ...tl, status: "Delivered", handover: "Pending" } : tl)));
+        setTransactions([...transactions, `Product ${product.name} delivered to buyer at ${roleEnvironments.Procurer} (OTP: ${otpCode})`]);
+      };
+
+      const buyerVerifyOtp = (trackingId) => {
+        const tracking = trackingLinks.find(tl => tl.id === trackingId);
+        const product = products.find(p => p.id === tracking.productId);
+        if (otp === generatedOtp) {
+          setTrackingLinks(trackingLinks.map(tl => (tl.id === trackingId ? { ...tl, status: "Received", handover: "Completed" } : tl)));
+          setProducts(products.map(p => (p.id === tracking.productId ? { ...p, status: "Sale Closed" } : p)));
+          setTransactions([...transactions, `Buyer verified OTP and received ${product.name} (Sale Closed) at ${roleEnvironments.Procurer}`]);
+          setPoints({ ...points, [currentUser.vendorCode]: points[currentUser.vendorCode] + 300 });
+          updateLeaderboard(currentUser.vendorCode, points[currentUser.vendorCode] + 300);
+          processPayments(product);
+        } else {
+          setTransactions([...transactions, `Buyer failed OTP verification for ${trackingId} at ${roleEnvironments.Procurer}`]);
+        }
+        setOtp("");
+        setGeneratedOtp(null);
+      };
+
+      const processPayments = (product) => {
+        const seller = users.find(u => u.id === product.sellerId);
+        const buyer = users.find(u => u.id === product.buyerId);
+        setTransactions([
+          ...transactions,
+          `Accounts processed payment for ${product.name} (Consignment: ${product.consignmentNumber}) at ${roleEnvironments.Accounts}`,
+          `Buyer payment confirmed by owner for ${product.name} at ${roleEnvironments.Admin}`,
+          `Seller receipt generated for ${seller.vendorCode}: $${product.price} at ${roleEnvironments.Accounts}`
+        ]);
+        setPoints({ ...points, [seller.vendorCode]: points[seller.vendorCode] + 200 });
+        updateLeaderboard(seller.vendorCode, points[seller.vendorCode] + 200);
+      };
+
+      const raiseDispute = (productId, reason) => {
+        const disputeId = disputes.length + 1;
+        setDisputes([...disputes, { id: disputeId, productId, reason, status: "Open", days: 0 }]);
+        setTransactions([...transactions, `Dispute raised for Product ID: ${productId} - ${reason} at ${roleEnvironments.Procurer}`]);
+      };
+
+      const resolveDispute = (disputeId) => {
+        const dispute = disputes.find(d => d.id === disputeId);
+        const product = products.find(p => p.id === dispute.productId);
+        setDisputes(disputes.map(d => (d.id === disputeId ? { ...d, status: "Resolved", days: Math.floor(Math.random() * 15) } : d)));
+        setTransactions([...transactions, `Arbitrator resolved dispute for ${product.name} in ${dispute.days} days at ${roleEnvironments.Arbitrator}`]);
+        processPayments(product);
+      };
+
+      const updateLeaderboard = (vendorCode, newPoints) => {
+        const updatedLeaderboard = [...leaderboard.filter(entry => entry.vendorCode !== vendorCode), { vendorCode, points: newPoints }];
+        setLeaderboard(updatedLeaderboard.sort((a, b) => b.points - a.points));
+      };
+
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setTrackingLinks(tl =>
+            tl.map(t => {
+              if (t.status === "In Transit") {
+                const locations = ["Warehouse", "Highway", "Port", "Customs Check"];
+                const newLocation = locations[Math.floor(Math.random() * locations.length)];
+                setProgress(p => ({ ...p, [t.id]: { ...p[t.id], location: newLocation } }));
+                return { ...t, location: newLocation };
+              }
+              return t;
+            })
+          );
+        }, 5000);
+        return () => clearInterval(interval);
+      }, []);
+
+      const getLevelProgress = () => {
+        if (!currentUser) return 0;
+        const roleLevels = {
+          Supplier: products.filter(p => p.sellerId === currentUser.id).length * 10,
+          Procurer: products.filter(p => p.buyerId === currentUser.id).length * 20,
+          Admin: products.filter(p => p.status === "Approved").length * 15,
+          Surveyor: workOrders.filter(wo => wo.surveyorId === currentUser.id && wo.status === "Completed").length * 25,
+          Transporter: trackingLinks.filter(tl => (currentUser.role === "Transporter" || currentUser.role === "Logistics") && tl.status === "In Transit").length * 30,
+          Logistics: trackingLinks.filter(tl => tl.status === "At Port").length * 30,
+          CHA: trackingLinks.filter(tl => tl.status === "Handed Over").length * 40,
+          Insurance: offers.filter(o => o.team === "Insurance" && o.status === "Approved").length * 20,
+          Arbitrator: disputes.filter(d => d.status === "Resolved").length * 50,
+          Accounts: transactions.length * 10
+        };
+        return roleLevels[currentUser.role] || 0;
       };
 
       return (
         <div className="container">
-          <h1>Marsa Group</h1>
-          <div>
-            <button onClick={() => setView("seller")}>Seller</button>
-            <button onClick={() => setView("buyer")}>Buyer</button>
-            <button onClick={() => setView("admin")}>Admin</button>
-            <button onClick={() => setView("accounts")}>Accounts</button>
-          </div>
-
-          {view === "seller" && (
-            <div>
-              <h2>Seller Dashboard</h2>
-              <h3>Add Product</h3>
+          <h1 style={{ animation: "pulse 2s infinite" }}>Marsa Group: Trading Quest</h1>
+          {view === "register" && !currentUser && (
+            <div style={{ animation: "fadeIn 1s" }}>
+              <h2>Level 1: Register to Start</h2>
+              <select value={newUserRole} onChange={(e) => setNewUserRole(e.target.value)}>
+                <option value="">Select Role</option>
+                {roles.map(role => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </select>
               <input
                 type="text"
-                placeholder="Product Name"
-                value={newProductName}
-                onChange={(e) => setNewProductName(e.target.value)}
-              />
-              <input
-                type="number"
-                placeholder="Price"
-                value={newProductPrice}
-                onChange={(e) => setNewProductPrice(e.target.value)}
+                placeholder="Enter Your Name"
+                value={newUserName}
+                onChange={(e) => setNewUserName(e.target.value)}
               />
               <input
                 type="text"
-                placeholder="Description"
-                value={newProductDesc}
-                onChange={(e) => setNewProductDesc(e.target.value)}
+                placeholder="Enter Contact Number"
+                value={newUserContact}
+                onChange={(e) => setNewUserContact(e.target.value)}
               />
-              <button onClick={addProduct}>Add Product</button>
-
-              <h3>Your Products</h3>
-              {products.length > 0 ? (
-                products.map(product => (
-                  <div key={product.id} className="product-card">
-                    <h4>{product.name}</h4>
-                    <p>Price: ${product.price}</p>
-                    <p>{product.description}</p>
-                    <p>Status: {product.sold ? "Sold" : "Available"}</p>
-                  </div>
-                ))
-              ) : (
-                <p>No products added yet.</p>
-              )}
+              <input
+                type="text"
+                placeholder="Enter Your Address"
+                value={newUserAddress}
+                onChange={(e) => setNewUserAddress(e.target.value)}
+              />
+              <button onClick={registerUser} disabled={!newUserRole || !newUserName || !newUserContact || !newUserAddress}>Register</button>
+              <h3>Login</h3>
+              <input
+                type="text"
+                placeholder="Enter Vendor Code"
+                onChange={(e) => loginUser(e.target.value)}
+              />
             </div>
           )}
-
-          {view === "buyer" && (
-            <div>
-              <h2>Buyer Dashboard</h2>
-              <h3>Available Products</h3>
-              {products.filter(p => !p.sold).length > 0 ? (
-                products.filter(p => !p.sold).map(product => (
-                  <div key={product.id} className="product-card">
-                    <h4>{product.name}</h4>
-                    <p>Price: ${product.price}</p>
-                    <p>{product.description}</p>
-                    <button onClick={() => buyProduct(product.id)}>Buy</button>
-                  </div>
-                ))
-              ) : (
-                <p>No products available.</p>
-              )}
-            </div>
-          )}
-
-          {view === "admin" && (
-            <div>
-              <h2>Admin Dashboard</h2>
-              <h3>Products</h3>
-              {products.map(product => (
-                <div key={product.id}>
-                  <p>{product.name} (Price: ${product.price}) - {product.sold ? "Sold" : "Available"}</p>
+          {currentUser && (
+            <div style={{ animation: "fadeIn 1s" }}>
+              <div className="character-section">
+                <span className="avatar">{characterAvatars[currentUser.role]}</span>
+                <p>Welcome, {currentUser.name} ({currentUser.role})</p>
+                <p>Vendor Code: {currentUser.vendorCode}</p>
+                <p>Contact: {currentUser.contact}</p>
+                <p>Address: {currentUser.address}</p>
+                <p>Location: {roleEnvironments[currentUser.role]}</p>
+                <p>Your Points: {points[currentUser.vendorCode]}</p>
+                <div className="progress-bar">
+                  <div style={{ width: `${Math.min(getLevelProgress(), 100)}%` }}></div>
                 </div>
-              ))}
+                <p>Level Progress: {Math.min(getLevelProgress(), 100)}%</p>
+                {currentUser.role === "Transporter" && <span className="vehicle-animation">??</span>}
+                {currentUser.role === "Logistics" && <span className="ship-animation">??</span>}
+                {currentUser.role === "Logistics" && trackingLinks.some(tl => tl.status === "In Transit") && <span className="cargo-animation">??</span>}
+              </div>
+              <button onClick={() => { setCurrentUser(null); setView("register"); }}>Logout</button>
+              <div>
+                <button onClick={() => setView("owner")}>Owner</button>
+                <button onClick={() => setView("dashboard")}>{currentUser.role} Dashboard</button>
+                <button onClick={() => setView("accounts")}>Accounts</button>
+                <button onClick={() => setView("leaderboard")}>Leaderboard</button>
+              </div>
 
-              <h3>Give Instructions</h3>
-              <button onClick={() => addInstruction("Surveyor", "Inspect the latest product")}>Instruct Surveyor</button>
-              <button onClick={() => addInstruction("Logistics", "Ship the latest product")}>Instruct Logistics</button>
-              <button onClick={() => addInstruction("Custom", "Clear the latest product")}>Instruct Custom</button>
-              <button onClick={() => addInstruction("Insurance", "Insure the latest product")}>Instruct Insurance</button>
-
-              <h3>Instructions Log</h3>
-              {instructions.length > 0 ? (
-                <ul>
-                  {instructions.map((instruction, index) => (
-                    <li key={index}>{instruction}</li>
+              {view === "owner" && (
+                <div>
+                  <h2>Level 2: Appoint Your Team</h2>
+                  <h3>Appoint Admin, Accounts, Arbitrator</h3>
+                  {["Admin", "Accounts", "Arbitrator"].map(role => (
+                    <button key={role} onClick={() => appointTeam(role)}>Appoint {role}</button>
                   ))}
-                </ul>
-              ) : (
-                <p>No instructions yet.</p>
+                  <h3>Team Members</h3>
+                  {users.filter(u => ["Admin", "Accounts", "Arbitrator"].includes(u.role)).map(user => (
+                    <p key={user.id}>{user.role} (Vendor Code: {user.vendorCode}) at {roleEnvironments[user.role]}</p>
+                  ))}
+                </div>
               )}
-            </div>
-          )}
 
-          {view === "accounts" && (
-            <div>
-              <h2>Accounts Dashboard</h2>
-              <h3>Transaction History</h3>
-              {transactions.length > 0 ? (
-                <ul>
-                  {transactions.map((transaction, index) => (
-                    <li key={index}>{transaction}</li>
+              {view === "dashboard" && currentUser.role === "Supplier" && (
+                <div>
+                  <h2>Level 3: Create Your Catalogue</h2>
+                  <input
+                    type="text"
+                    placeholder="Product Name"
+                    value={newProductName}
+                    onChange={(e) => setNewProductName(e.target.value)}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Price"
+                    value={newProductPrice}
+                    onChange={(e) => setNewProductPrice(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Description"
+                    value={newProductDesc}
+                    onChange={(e) => setNewProductDesc(e.target.value)}
+                  />
+                  <button onClick={addProduct}>Add Product</button>
+                  <h3>Your Products</h3>
+                  {products.filter(p => p.sellerId === currentUser.id).map(product => (
+                    <div key={product.id} className="product-card">
+                      <h4>{product.name}</h4>
+                      <p>Price: ${product.price}</p>
+                      <p>{product.description}</p>
+                      <p>Status: {product.status}</p>
+                      <p>Consignment: {product.consignmentNumber}</p>
+                      {trackingLinks.filter(tl => tl.productId === product.id).map(tl => (
+                        <p key={tl.id}>Tracking: {tl.id} - {tl.location}</p>
+                      ))}
+                    </div>
                   ))}
-                </ul>
-              ) : (
-                <p>No transactions yet.</p>
+                </div>
+              )}
+
+              {view === "dashboard" && currentUser.role === "Admin" && (
+                <div>
+                  <h2>Level 4: Manage Process</h2>
+                  <h3>Approve Products</h3>
+                  {products.map(product => (
+                    <div key={product.id}>
+                      <p>{product.name} (Price: ${product.price}) - {product.description}</p>
+                      <p>Status: {product.status}</p>
+                      {product.status === "Pending Approval" && (
+                        <button onClick={() => approveProduct(product.id)}>Approve</button>
+                      )}
+                    </div>
+                  ))}
+                  <h3>Review Survey Reports</h3>
+                  {workOrders.map(wo => (
+                    <div key={wo.id}>
+                      <p>Product ID: {wo.productId} - Status: {wo.status}</p>
+                      {wo.status === "Completed" && (
+                        <div>
+                          <p>Report: {wo.report}</p>
+                          <p>Image Timestamp: {wo.imageTimeDate}</p>
+                          <button onClick={() => adminAllowSurvey(wo.id)}>Allow</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <h3>Offers from Teams</h3>
+                  {offers.map((offer, idx) => (
+                    <div key={idx}>
+                      <p>{offer.team} for Product ID: {offer.productId} - {offer.status}</p>
+                      {offer.status === "Submitted" && (
+                        <div>
+                          <p>Offer: {offer.details}</p>
+                          <button onClick={() => approveOffer(idx)}>Approve Offer</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {draftPO && (
+                    <div>
+                      <h3>Draft PO</h3>
+                      <p>Product ID: {draftPO.productId}, Price: ${draftPO.price}, Status: ${draftPO.status}</p>
+                    </div>
+                  )}
+                  <h3>Track Shipments</h3>
+                  {trackingLinks.map(tl => (
+                    <div key={tl.id}>
+                      <p>Tracking ID: {tl.id}</p>
+                      <p>Location: {progress[tl.id]?.location || tl.location}</p>
+                      <p>Status: {tl.status}</p>
+                    </div>
+                  ))}
+                  <h3>Disputes</h3>
+                  {disputes.map(dispute => (
+                    <div key={dispute.id}>
+                      <p>Dispute ID: {dispute.id} - Product ID: ${dispute.productId}</p>
+                      <p>Reason: {dispute.reason}</p>
+                      <p>Status: {dispute.status}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {view === "dashboard" && currentUser.role === "Surveyor" && (
+                <div>
+                  <h2>Level 5: Survey Products</h2>
+                  {workOrders.filter(wo => wo.surveyorId === currentUser.id).map(workOrder => (
+                    <div key={workOrder.id}>
+                      <p>Product ID: {workOrder.productId} - Status: {workOrder.status}</p>
+                      <p>Seller Address: {workOrder.sellerAddress}</p>
+                      {workOrder.status === "Assigned" && (
+                        <div>
+                          <input
+                            type="text"
+                            placeholder="Survey Report"
+                            value={surveyReport}
+                            onChange={(e) => setSurveyReport(e.target.value)}
+                          />
+                          <button onClick={() => submitSurveyReport(workOrder.id)}>Submit Report</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {view === "dashboard" && currentUser.role === "Procurer" && (
+                <div>
+                  <h2>Level 6: Buy Products</h2>
+                  {products.filter(p => p.status === "Survey Approved").map(product => (
+                    <div key={product.id} className="product-card">
+                      <h4>{product.name}</h4>
+                      <p>Price: ${product.price}</p>
+                      <p>{product.description}</p>
+                      <button onClick={() => buyProduct(product.id)}>Buy</button>
+                    </div>
+                  ))}
+                  <h3>Confirm and Pay</h3>
+                  {products.filter(p => p.buyerId === currentUser.id && p.status === "Sold").map(product => (
+                    <div key={product.id}>
+                      <p>{product.name}</p>
+                      <button onClick={() => confirmAndPay(product.id)}>Confirm & Pay</button>
+                    </div>
+                  ))}
+                  <h3>Track Shipments</h3>
+                  {trackingLinks.filter(tl => products.find(p => p.id === tl.productId && p.buyerId === currentUser.id)).map(tl => (
+                    <div key={tl.id}>
+                      <p>Tracking ID: {tl.id}</p>
+                      <p>Location: {progress[tl.id]?.location || tl.location}</p>
+                      <p>Status: {tl.status}</p>
+                    </div>
+                  ))}
+                  <h3>Receive Products</h3>
+                  {trackingLinks.filter(tl => tl.status === "Delivered" && products.find(p => p.id === tl.productId && p.buyerId === currentUser.id)).map(tl => (
+                    <div key={tl.id}>
+                      <p>Tracking ID: {tl.id}</p>
+                      {generatedOtp && (
+                        <div>
+                          <input
+                            type="text"
+                            placeholder="Enter OTP"
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                          />
+                          <button onClick={() => buyerVerifyOtp(tl.id)}>Verify OTP</button>
+                        </div>
+                      )}
+                      <button onClick={() => raiseDispute(products.find(p => p.id === tl.productId).id, "Product damaged")}>Raise Dispute</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {view === "dashboard" && ["Insurance", "CHA", "Logistics", "Transporter"].includes(currentUser.role) && (
+                <div>
+                  <h2>Level 7: {currentUser.role} Tasks</h2>
+                  {offers.filter(o => o.team === currentUser.role && o.status === "Requested").map(offer => (
+                    <div key={offer.productId}>
+                      <p>Product ID: {offer.productId}</p>
+                      <input
+                        type="text"
+                        placeholder="Your Offer/Service Details"
+                        onChange={(e) => submitOffer(offer.productId, e.target.value)}
+                      />
+                    </div>
+                  ))}
+                  {offers.filter(o => o.team === currentUser.role && o.status === "Approved").map(offer => (
+                    <div key={offer.productId}>
+                      <p>Task for Product ID: {offer.productId} - Approved</p>
+                    </div>
+                  ))}
+                  {trackingLinks.filter(tl => (currentUser.role === "Transporter" || currentUser.role === "Logistics") && tl.status === "In Transit").map(tl => (
+                    <div key={tl.id}>
+                      <p>Tracking ID: {tl.id}</p>
+                      <p>Current Location: {progress[tl.id]?.location || tl.location}</p>
+                      <input
+                        type="text"
+                        placeholder="Update Location"
+                        onChange={(e) => updateProgress(tl.id, e.target.value)}
+                      />
+                      {(currentUser.role === "Logistics" && tl.status === "In Transit") && (
+                        <button onClick={() => handoverToCHA(tl.id)}>Handover to CHA</button>
+                      )}
+                    </div>
+                  ))}
+                  {trackingLinks.filter(tl => currentUser.role === "CHA" && tl.status === "At Port").map(tl => (
+                    <div key={tl.id}>
+                      <p>Tracking ID: {tl.id}</p>
+                      {generatedOtp && (
+                        <div>
+                          <input
+                            type="text"
+                            placeholder="Enter OTP"
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                          />
+                          <button onClick={() => chaVerifyOtp(tl.id)}>Verify OTP</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {view === "dashboard" && currentUser.role === "Arbitrator" && (
+                <div>
+                  <h2>Level 8: Resolve Disputes</h2>
+                  {disputes.map(dispute => (
+                    <div key={dispute.id}>
+                      <p>Dispute ID: {dispute.id} - Product ID: ${dispute.productId}</p>
+                      <p>Reason: {dispute.reason}</p>
+                      <p>Status: {dispute.status}</p>
+                      {dispute.status === "Open" && (
+                        <button onClick={() => resolveDispute(dispute.id)}>Resolve</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {view === "accounts" && (
+                <div>
+                  <h2>Accounts: Transaction Log</h2>
+                  {transactions.length > 0 ? (
+                    <ul>
+                      {transactions.map((transaction, index) => (
+                        <li key={index}>{transaction}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>No transactions yet.</p>
+                  )}
+                </div>
+              )}
+
+              {view === "leaderboard" && (
+                <div>
+                  <h2>Leaderboard</h2>
+                  {leaderboard.map((entry, index) => (
+                    <p key={index}>Rank {index + 1}: {entry.vendorCode} - {entry.points} Points</p>
+                  ))}
+                </div>
               )}
             </div>
           )}
