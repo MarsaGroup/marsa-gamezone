@@ -36,24 +36,57 @@
       const [money, setMoney] = useState(500);
       const [searchTerm, setSearchTerm] = useState("");
       const [view, setView] = useState("catalogue");
+      const [transactions, setTransactions] = useState([]);
+      const [newCharacterName, setNewCharacterName] = useState("");
+      const [newCharacterPrice, setNewCharacterPrice] = useState("");
+      const [addMoneyAmount, setAddMoneyAmount] = useState(""); // Admin ke liye money add
 
       const buyCharacter = (id) => {
-        setCharacters(characters.map(char => {
-          if (char.id === id && !char.owned && money >= char.price) {
-            setMoney(money - char.price);
-            return { ...char, owned: true };
-          }
-          return char;
-        }));
+        const char = characters.find(c => c.id === id);
+        if (char && !char.owned && money >= char.price) {
+          setMoney(money - char.price);
+          setCharacters(characters.map(c => (c.id === id ? { ...c, owned: true } : c)));
+          setTransactions([...transactions, `Bought ${char.name} for $${char.price}`]);
+        }
       };
 
       const levelUpCharacter = (id) => {
-        setCharacters(characters.map(char => {
-          if (char.id === id && char.owned && char.level < 3) {
-            return { ...char, level: char.level + 1 };
-          }
-          return char;
-        }));
+        const char = characters.find(c => c.id === id);
+        if (char && char.owned && char.level < 3) {
+          setCharacters(characters.map(c => (c.id === id ? { ...c, level: c.level + 1 } : c)));
+          setTransactions([...transactions, `Leveled up ${char.name} to Level ${char.level + 1}`]);
+        }
+      };
+
+      const addCharacter = () => {
+        if (newCharacterName && newCharacterPrice) {
+          const newId = characters.length + 1;
+          setCharacters([...characters, {
+            id: newId,
+            name: newCharacterName,
+            level: 1,
+            price: parseInt(newCharacterPrice),
+            owned: false
+          }]);
+          setTransactions([...transactions, `Admin added ${newCharacterName}`]);
+          setNewCharacterName("");
+          setNewCharacterPrice("");
+        }
+      };
+
+      const removeCharacter = (id) => {
+        const char = characters.find(c => c.id === id);
+        setCharacters(characters.filter(c => c.id !== id));
+        setTransactions([...transactions, `Admin removed ${char.name}`]);
+      };
+
+      const addMoney = () => {
+        if (addMoneyAmount) {
+          const amount = parseInt(addMoneyAmount);
+          setMoney(money + amount);
+          setTransactions([...transactions, `Admin added $${amount} to owner's money`]);
+          setAddMoneyAmount("");
+        }
       };
 
       const filteredCharacters = characters.filter(char =>
@@ -67,6 +100,8 @@
           <div>
             <button onClick={() => setView("catalogue")}>Catalogue</button>
             <button onClick={() => setView("office")}>Owner's Office</button>
+            <button onClick={() => setView("admin")}>Admin Panel</button>
+            <button onClick={() => setView("accounts")}>Accounts</button>
           </div>
 
           {view === "catalogue" && (
@@ -82,7 +117,7 @@
                 {filteredCharacters.map(char => (
                   <div key={char.id} className="character-card">
                     <img
-                      src={characterImages[char.name][char.level]}
+                      src={characterImages[char.name]?.[char.level] || "https://via.placeholder.com/100"}
                       alt={char.name}
                       style={{ width: "100px", height: "100px", borderRadius: "10px" }}
                     />
@@ -111,7 +146,7 @@
                 characters.filter(char => char.owned).map(char => (
                   <div key={char.id}>
                     <img
-                      src={characterImages[char.name][char.level]}
+                      src={characterImages[char.name]?.[char.level] || "https://via.placeholder.com/50"}
                       alt={char.name}
                       style={{ width: "50px", height: "50px", borderRadius: "10px" }}
                     />
@@ -119,7 +154,60 @@
                   </div>
                 ))
               ) : (
-                <p>No characters owned yet.</p>
+                <p>No characters owned yet. Go to Catalogue and buy some!</p>
+              )}
+            </div>
+          )}
+
+          {view === "admin" && (
+            <div>
+              <h2>Admin Panel</h2>
+              <h3>Add Money to Owner</h3>
+              <input
+                type="number"
+                placeholder="Amount"
+                value={addMoneyAmount}
+                onChange={(e) => setAddMoneyAmount(e.target.value)}
+              />
+              <button onClick={addMoney}>Add Money</button>
+
+              <h3>Add New Character</h3>
+              <input
+                type="text"
+                placeholder="Character Name"
+                value={newCharacterName}
+                onChange={(e) => setNewCharacterName(e.target.value)}
+              />
+              <input
+                type="number"
+                placeholder="Price"
+                value={newCharacterPrice}
+                onChange={(e) => setNewCharacterPrice(e.target.value)}
+              />
+              <button onClick={addCharacter}>Add Character</button>
+
+              <h3>Remove Characters</h3>
+              {characters.map(char => (
+                <div key={char.id}>
+                  <p>{char.name} (Price: ${char.price})</p>
+                  <button onClick={() => removeCharacter(char.id)}>Remove</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {view === "accounts" && (
+            <div>
+              <h2>Accounts</h2>
+              <h3>Transaction History</h3>
+              {transactions.length > 0 ? (
+                <ul>
+                  {transactions.map((transaction, index) => (
+                    <li key={index}>{transaction}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No transactions yet.</p>
               )}
             </div>
           )}
