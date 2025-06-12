@@ -47,36 +47,28 @@
       const [progress, setProgress] = useState({});
       const [otp, setOtp] = useState("");
       const [generatedOtp, setGeneratedOtp] = useState(null);
+      const [teamRequests, setTeamRequests] = useState([]);
+      const [newRequestQualification, setNewRequestQualification] = useState("");
 
       const roles = ["Supplier", "Procurer", "Surveyor", "Transporter", "Logistics", "CHA", "Insurance"];
+      const restrictedRoles = ["Admin", "Accounts", "Arbitrator"];
 
       const characterAvatars = {
-  Supplier: "images/supplier.png",
-  Procurer: "images/procurer.png",
-  Admin: "images/admin.png",
-  Surveyor: "images/surveyor.png",
-  Transporter: "images/transporter.png",
-  Logistics: "images/logistics.png",
-  CHA: "images/cha.png",
-  Insurance: "images/insurance.png",
-  Arbitrator: "images/arbitrator.png",
-  Accounts: "images/accounts.png"
-};
-
-const roleBackgrounds = {
-  Supplier: "url('images/supplier-bg.jpg')",
-  Procurer: "url('images/procurer-bg.jpg')",
-  Admin: "url('images/admin-bg.jpg')",
-  Surveyor: "url('images/surveyor-bg.jpg')",
-  Transporter: "url('images/transporter-bg.jpg')",
-  Logistics: "url('images/logistics-bg.jpg')",
-  CHA: "url('images/cha-bg.jpg')",
-  Insurance: "url('images/insurance-bg.jpg')",
-  Arbitrator: "url('images/arbitrator-bg.jpg')",
-  Accounts: "url('images/accounts-bg.jpg')"
-};
+        Owner: "??",
+        Supplier: "?????",
+        Procurer: "??",
+        Admin: "?????",
+        Surveyor: "??",
+        Transporter: "??",
+        Logistics: "??",
+        CHA: "??",
+        Insurance: "???",
+        Arbitrator: "??",
+        Accounts: "??"
+      };
 
       const roleEnvironments = {
+        Owner: "?? Owner's Castle",
         Supplier: "?? Shop/Warehouse",
         Procurer: "?? Buyer Shop/Factory",
         Admin: "?? Admin Office",
@@ -89,12 +81,49 @@ const roleBackgrounds = {
         Accounts: "?? Accounts Office"
       };
 
-      const appointTeam = (role) => {
+      // Default Owner Setup
+      useEffect(() => {
+        if (users.length === 0) {
+          setUsers([{
+            id: 0,
+            role: "Owner",
+            vendorCode: "VC-0-OWN",
+            name: "Default Owner",
+            contact: "owner@example.com",
+            address: "Owner's Address",
+            status: "Appointed"
+          }]);
+          setPoints({ "VC-0-OWN": 1000 });
+          updateLeaderboard("VC-0-OWN", 1000);
+        }
+      }, []);
+
+      const requestTeamRole = (role) => {
+        if (newRequestQualification) {
+          const requestId = teamRequests.length + 1;
+          setTeamRequests([...teamRequests, { id: requestId, role, qualification: newRequestQualification, status: "Pending" }]);
+          setTransactions([...transactions, `Request for ${role} role submitted with qualification: ${newRequestQualification}`]);
+          setNewRequestQualification("");
+        }
+      };
+
+      const approveTeamRole = (requestId) => {
+        const request = teamRequests.find(req => req.id === requestId);
         const newId = users.length + 1;
-        const vendorCode = `VC-${newId}-${role.slice(0, 3).toUpperCase()}`;
-        setUsers([...users, { id: newId, role, vendorCode, status: "Appointed" }]);
-        setTransactions([...transactions, `Owner appointed ${role}`]);
-        setPoints({ ...points, [vendorCode]: 0 });
+        const vendorCode = `VC-${newId}-${request.role.slice(0, 3).toUpperCase()}`;
+        setUsers([...users, { 
+          id: newId, 
+          role: request.role, 
+          vendorCode, 
+          name: `Team ${request.role}`, 
+          contact: `team${newId}@example.com`, 
+          address: `${request.role} Office`, 
+          status: "Appointed" 
+        }]);
+        setTeamRequests(teamRequests.map(req => req.id === requestId ? { ...req, status: "Approved" } : req));
+        setTransactions([...transactions, `Owner approved ${request.role} role for Vendor Code: ${vendorCode}`]);
+        setPoints({ ...points, [vendorCode]: 100 });
+        updateLeaderboard(vendorCode, 100);
       };
 
       const registerUser = () => {
@@ -371,6 +400,7 @@ const roleBackgrounds = {
       const getLevelProgress = () => {
         if (!currentUser) return 0;
         const roleLevels = {
+          Owner: transactions.length * 50,
           Supplier: products.filter(p => p.sellerId === currentUser.id).length * 10,
           Procurer: products.filter(p => p.buyerId === currentUser.id).length * 20,
           Admin: products.filter(p => p.status === "Approved").length * 15,
@@ -419,9 +449,23 @@ const roleBackgrounds = {
               <h3>Login</h3>
               <input
                 type="text"
-                placeholder="Enter Vendor Code"
+                placeholder="Enter Vendor Code (e.g., VC-0-OWN for Owner)"
                 onChange={(e) => loginUser(e.target.value)}
               />
+              <h3>Request to Join Owner's Team</h3>
+              <select onChange={(e) => setNewUserRole(e.target.value)}>
+                <option value="">Select Role to Request</option>
+                {restrictedRoles.map(role => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                placeholder="Enter Your Qualifications"
+                value={newRequestQualification}
+                onChange={(e) => setNewRequestQualification(e.target.value)}
+              />
+              <button onClick={() => requestTeamRole(newUserRole)} disabled={!newUserRole || !newRequestQualification}>Submit Request</button>
             </div>
           )}
           {currentUser && (
@@ -444,21 +488,29 @@ const roleBackgrounds = {
               </div>
               <button onClick={() => { setCurrentUser(null); setView("register"); }}>Logout</button>
               <div>
-                <button onClick={() => setView("owner")}>Owner</button>
+                {currentUser.role === "Owner" && <button onClick={() => setView("owner")}>Owner Dashboard</button>}
                 <button onClick={() => setView("dashboard")}>{currentUser.role} Dashboard</button>
                 <button onClick={() => setView("accounts")}>Accounts</button>
                 <button onClick={() => setView("leaderboard")}>Leaderboard</button>
               </div>
 
-              {view === "owner" && (
+              {view === "owner" && currentUser.role === "Owner" && (
                 <div>
-                  <h2>Level 2: Appoint Your Team</h2>
-                  <h3>Appoint Admin, Accounts, Arbitrator</h3>
-                  {["Admin", "Accounts", "Arbitrator"].map(role => (
-                    <button key={role} onClick={() => appointTeam(role)}>Appoint {role}</button>
+                  <h2>Owner Dashboard: Manage Your Team</h2>
+                  <h3>Team Role Requests</h3>
+                  {teamRequests.map(request => (
+                    <div key={request.id}>
+                      <p>Request ID: {request.id}</p>
+                      <p>Role: {request.role}</p>
+                      <p>Qualification: {request.qualification}</p>
+                      <p>Status: {request.status}</p>
+                      {request.status === "Pending" && (
+                        <button onClick={() => approveTeamRole(request.id)}>Approve Request</button>
+                      )}
+                    </div>
                   ))}
-                  <h3>Team Members</h3>
-                  {users.filter(u => ["Admin", "Accounts", "Arbitrator"].includes(u.role)).map(user => (
+                  <h3>Appointed Team Members</h3>
+                  {users.filter(u => restrictedRoles.includes(u.role)).map(user => (
                     <p key={user.id}>{user.role} (Vendor Code: {user.vendorCode}) at {roleEnvironments[user.role]}</p>
                   ))}
                 </div>
@@ -466,7 +518,7 @@ const roleBackgrounds = {
 
               {view === "dashboard" && currentUser.role === "Supplier" && (
                 <div>
-                  <h2>Level 3: Create Your Catalogue</h2>
+                  <h2>Level 2: Create Your Catalogue</h2>
                   <input
                     type="text"
                     placeholder="Product Name"
@@ -504,7 +556,7 @@ const roleBackgrounds = {
 
               {view === "dashboard" && currentUser.role === "Admin" && (
                 <div>
-                  <h2>Level 4: Manage Process</h2>
+                  <h2>Level 3: Manage Process</h2>
                   <h3>Approve Products</h3>
                   {products.map(product => (
                     <div key={product.id}>
@@ -567,7 +619,7 @@ const roleBackgrounds = {
 
               {view === "dashboard" && currentUser.role === "Surveyor" && (
                 <div>
-                  <h2>Level 5: Survey Products</h2>
+                  <h2>Level 4: Survey Products</h2>
                   {workOrders.filter(wo => wo.surveyorId === currentUser.id).map(workOrder => (
                     <div key={workOrder.id}>
                       <p>Product ID: {workOrder.productId} - Status: {workOrder.status}</p>
@@ -590,7 +642,7 @@ const roleBackgrounds = {
 
               {view === "dashboard" && currentUser.role === "Procurer" && (
                 <div>
-                  <h2>Level 6: Buy Products</h2>
+                  <h2>Level 5: Buy Products</h2>
                   {products.filter(p => p.status === "Survey Approved").map(product => (
                     <div key={product.id} className="product-card">
                       <h4>{product.name}</h4>
@@ -637,7 +689,7 @@ const roleBackgrounds = {
 
               {view === "dashboard" && ["Insurance", "CHA", "Logistics", "Transporter"].includes(currentUser.role) && (
                 <div>
-                  <h2>Level 7: {currentUser.role} Tasks</h2>
+                  <h2>Level 6: {currentUser.role} Tasks</h2>
                   {offers.filter(o => o.team === currentUser.role && o.status === "Requested").map(offer => (
                     <div key={offer.productId}>
                       <p>Product ID: {offer.productId}</p>
@@ -688,7 +740,7 @@ const roleBackgrounds = {
 
               {view === "dashboard" && currentUser.role === "Arbitrator" && (
                 <div>
-                  <h2>Level 8: Resolve Disputes</h2>
+                  <h2>Level 7: Resolve Disputes</h2>
                   {disputes.map(dispute => (
                     <div key={dispute.id}>
                       <p>Dispute ID: {dispute.id} - Product ID: ${dispute.productId}</p>
