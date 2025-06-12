@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Marsa GameZone</title>
+  <title>Marsa Group</title>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/x-icon" href="https://www.netlify.com/favicon.ico">
 </head>
@@ -15,190 +15,147 @@
   <script type="text/babel">
     const { useState } = React;
 
-    const characterImages = {
-      "Grain Lord": {
-        1: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80",
-        2: "https://images.unsplash.com/photo-1506794778202-c1f8d3f9e1b6?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80",
-        3: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80"
-      },
-      "Seller Star": {
-        1: "https://images.unsplash.com/photo-1573496359142-b8d877993ecb?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80",
-        2: "https://images.unsplash.com/photo-1573497019236-17f8177b81e8?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80",
-        3: "https://images.unsplash.com/photo-1573496130407-3b5b7f4e8e4a?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80"
-      }
-    };
-
     const App = () => {
-      const [characters, setCharacters] = useState([
-        { id: 1, name: "Grain Lord", level: 1, price: 100, owned: false },
-        { id: 2, name: "Seller Star", level: 1, price: 150, owned: false }
-      ]);
-      const [money, setMoney] = useState(500);
-      const [searchTerm, setSearchTerm] = useState("");
-      const [view, setView] = useState("catalogue");
+      const [products, setProducts] = useState([]);
+      const [newProductName, setNewProductName] = useState("");
+      const [newProductPrice, setNewProductPrice] = useState("");
+      const [newProductDesc, setNewProductDesc] = useState("");
       const [transactions, setTransactions] = useState([]);
-      const [newCharacterName, setNewCharacterName] = useState("");
-      const [newCharacterPrice, setNewCharacterPrice] = useState("");
-      const [addMoneyAmount, setAddMoneyAmount] = useState(""); // Admin ke liye money add
+      const [view, setView] = useState("seller");
+      const [instructions, setInstructions] = useState([]);
 
-      const buyCharacter = (id) => {
-        const char = characters.find(c => c.id === id);
-        if (char && !char.owned && money >= char.price) {
-          setMoney(money - char.price);
-          setCharacters(characters.map(c => (c.id === id ? { ...c, owned: true } : c)));
-          setTransactions([...transactions, `Bought ${char.name} for $${char.price}`]);
-        }
-      };
-
-      const levelUpCharacter = (id) => {
-        const char = characters.find(c => c.id === id);
-        if (char && char.owned && char.level < 3) {
-          setCharacters(characters.map(c => (c.id === id ? { ...c, level: c.level + 1 } : c)));
-          setTransactions([...transactions, `Leveled up ${char.name} to Level ${char.level + 1}`]);
-        }
-      };
-
-      const addCharacter = () => {
-        if (newCharacterName && newCharacterPrice) {
-          const newId = characters.length + 1;
-          setCharacters([...characters, {
+      const addProduct = () => {
+        if (newProductName && newProductPrice && newProductDesc) {
+          const newId = products.length + 1;
+          setProducts([...products, {
             id: newId,
-            name: newCharacterName,
-            level: 1,
-            price: parseInt(newCharacterPrice),
-            owned: false
+            name: newProductName,
+            price: parseInt(newProductPrice),
+            description: newProductDesc,
+            sold: false
           }]);
-          setTransactions([...transactions, `Admin added ${newCharacterName}`]);
-          setNewCharacterName("");
-          setNewCharacterPrice("");
+          setTransactions([...transactions, `Seller added product: ${newProductName}`]);
+          setNewProductName("");
+          setNewProductPrice("");
+          setNewProductDesc("");
         }
       };
 
-      const removeCharacter = (id) => {
-        const char = characters.find(c => c.id === id);
-        setCharacters(characters.filter(c => c.id !== id));
-        setTransactions([...transactions, `Admin removed ${char.name}`]);
-      };
-
-      const addMoney = () => {
-        if (addMoneyAmount) {
-          const amount = parseInt(addMoneyAmount);
-          setMoney(money + amount);
-          setTransactions([...transactions, `Admin added $${amount} to owner's money`]);
-          setAddMoneyAmount("");
+      const buyProduct = (id) => {
+        const product = products.find(p => p.id === id);
+        if (product && !product.sold) {
+          setProducts(products.map(p => (p.id === id ? { ...p, sold: true } : p)));
+          setTransactions([...transactions, `Buyer bought ${product.name} for $${product.price}`]);
+          setInstructions([...instructions, `Surveyor: Inspect ${product.name}`, `Logistics: Ship ${product.name}`, `Custom: Clear ${product.name}`, `Insurance: Insure ${product.name}`]);
         }
       };
 
-      const filteredCharacters = characters.filter(char =>
-        char.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const addInstruction = (team, message) => {
+        setInstructions([...instructions, `${team}: ${message}`]);
+        setTransactions([...transactions, `Admin instructed ${team}: ${message}`]);
+      };
 
       return (
         <div className="container">
-          <h1>Marsa GameZone</h1>
-          <p>Money: ${money}</p>
+          <h1>Marsa Group</h1>
           <div>
-            <button onClick={() => setView("catalogue")}>Catalogue</button>
-            <button onClick={() => setView("office")}>Owner's Office</button>
-            <button onClick={() => setView("admin")}>Admin Panel</button>
+            <button onClick={() => setView("seller")}>Seller</button>
+            <button onClick={() => setView("buyer")}>Buyer</button>
+            <button onClick={() => setView("admin")}>Admin</button>
             <button onClick={() => setView("accounts")}>Accounts</button>
           </div>
 
-          {view === "catalogue" && (
+          {view === "seller" && (
             <div>
-              <h2>Catalogue</h2>
+              <h2>Seller Dashboard</h2>
+              <h3>Add Product</h3>
               <input
                 type="text"
-                placeholder="Search characters..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Product Name"
+                value={newProductName}
+                onChange={(e) => setNewProductName(e.target.value)}
               />
-              <div className="catalogue-grid">
-                {filteredCharacters.map(char => (
-                  <div key={char.id} className="character-card">
-                    <img
-                      src={characterImages[char.name]?.[char.level] || "https://via.placeholder.com/100"}
-                      alt={char.name}
-                      style={{ width: "100px", height: "100px", borderRadius: "10px" }}
-                    />
-                    <h3>{char.name} (Level {char.level})</h3>
-                    <p>Price: ${char.price}</p>
-                    {char.owned ? (
-                      <button onClick={() => levelUpCharacter(char.id)} disabled={char.level >= 3}>
-                        Level Up (to Level {char.level + 1})
-                      </button>
-                    ) : (
-                      <button onClick={() => buyCharacter(char.id)} disabled={money < char.price}>
-                        Buy
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+              <input
+                type="number"
+                placeholder="Price"
+                value={newProductPrice}
+                onChange={(e) => setNewProductPrice(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Description"
+                value={newProductDesc}
+                onChange={(e) => setNewProductDesc(e.target.value)}
+              />
+              <button onClick={addProduct}>Add Product</button>
 
-          {view === "office" && (
-            <div className="owner-office">
-              <h2>Owner's Office</h2>
-              <h3>Owned Characters</h3>
-              {characters.filter(char => char.owned).length > 0 ? (
-                characters.filter(char => char.owned).map(char => (
-                  <div key={char.id}>
-                    <img
-                      src={characterImages[char.name]?.[char.level] || "https://via.placeholder.com/50"}
-                      alt={char.name}
-                      style={{ width: "50px", height: "50px", borderRadius: "10px" }}
-                    />
-                    <p>{char.name} (Level {char.level})</p>
+              <h3>Your Products</h3>
+              {products.length > 0 ? (
+                products.map(product => (
+                  <div key={product.id} className="product-card">
+                    <h4>{product.name}</h4>
+                    <p>Price: ${product.price}</p>
+                    <p>{product.description}</p>
+                    <p>Status: {product.sold ? "Sold" : "Available"}</p>
                   </div>
                 ))
               ) : (
-                <p>No characters owned yet. Go to Catalogue and buy some!</p>
+                <p>No products added yet.</p>
+              )}
+            </div>
+          )}
+
+          {view === "buyer" && (
+            <div>
+              <h2>Buyer Dashboard</h2>
+              <h3>Available Products</h3>
+              {products.filter(p => !p.sold).length > 0 ? (
+                products.filter(p => !p.sold).map(product => (
+                  <div key={product.id} className="product-card">
+                    <h4>{product.name}</h4>
+                    <p>Price: ${product.price}</p>
+                    <p>{product.description}</p>
+                    <button onClick={() => buyProduct(product.id)}>Buy</button>
+                  </div>
+                ))
+              ) : (
+                <p>No products available.</p>
               )}
             </div>
           )}
 
           {view === "admin" && (
             <div>
-              <h2>Admin Panel</h2>
-              <h3>Add Money to Owner</h3>
-              <input
-                type="number"
-                placeholder="Amount"
-                value={addMoneyAmount}
-                onChange={(e) => setAddMoneyAmount(e.target.value)}
-              />
-              <button onClick={addMoney}>Add Money</button>
-
-              <h3>Add New Character</h3>
-              <input
-                type="text"
-                placeholder="Character Name"
-                value={newCharacterName}
-                onChange={(e) => setNewCharacterName(e.target.value)}
-              />
-              <input
-                type="number"
-                placeholder="Price"
-                value={newCharacterPrice}
-                onChange={(e) => setNewCharacterPrice(e.target.value)}
-              />
-              <button onClick={addCharacter}>Add Character</button>
-
-              <h3>Remove Characters</h3>
-              {characters.map(char => (
-                <div key={char.id}>
-                  <p>{char.name} (Price: ${char.price})</p>
-                  <button onClick={() => removeCharacter(char.id)}>Remove</button>
+              <h2>Admin Dashboard</h2>
+              <h3>Products</h3>
+              {products.map(product => (
+                <div key={product.id}>
+                  <p>{product.name} (Price: ${product.price}) - {product.sold ? "Sold" : "Available"}</p>
                 </div>
               ))}
+
+              <h3>Give Instructions</h3>
+              <button onClick={() => addInstruction("Surveyor", "Inspect the latest product")}>Instruct Surveyor</button>
+              <button onClick={() => addInstruction("Logistics", "Ship the latest product")}>Instruct Logistics</button>
+              <button onClick={() => addInstruction("Custom", "Clear the latest product")}>Instruct Custom</button>
+              <button onClick={() => addInstruction("Insurance", "Insure the latest product")}>Instruct Insurance</button>
+
+              <h3>Instructions Log</h3>
+              {instructions.length > 0 ? (
+                <ul>
+                  {instructions.map((instruction, index) => (
+                    <li key={index}>{instruction}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No instructions yet.</p>
+              )}
             </div>
           )}
 
           {view === "accounts" && (
             <div>
-              <h2>Accounts</h2>
+              <h2>Accounts Dashboard</h2>
               <h3>Transaction History</h3>
               {transactions.length > 0 ? (
                 <ul>
