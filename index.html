@@ -13,6 +13,10 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
+            min-height: 100vh; /* Ensure body takes full viewport height */
+            margin: 0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
     </style>
 </head>
@@ -20,7 +24,15 @@
     <div id="root">
         <!-- Your React app will be mounted here -->
     </div>
-    <!-- Your main application JavaScript file -->
+
+    <!-- Load React and ReactDOM globally *before* your app.js -->
+    <!-- These UMD (Universal Module Definition) builds expose React and ReactDOM globally -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Your main application JavaScript file.
+         It will now assume React and ReactDOM are available as global objects.
+         We keep type="module" because Firebase imports still require it. -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
