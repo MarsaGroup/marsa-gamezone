@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Export/Import Management</title>
+    <title>Export/Import Management System</title>
     <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Custom Stylesheet -->
+    <!-- Custom Stylesheet (if you add any specific styles beyond Tailwind) -->
     <link rel="stylesheet" href="style.css">
     <style>
         /* Inter font import for consistent typography */
@@ -25,14 +25,18 @@
         <!-- Your React app will be mounted here -->
     </div>
 
-    <!-- Load React and ReactDOM globally *before* your app.js -->
-    <!-- These UMD (Universal Module Definition) builds expose React and ReactDOM globally -->
+    <!-- Load React and ReactDOM globally -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
+    <!-- Load Firebase libraries globally -->
+    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.js"></script>
+
     <!-- Your main application JavaScript file.
-         It will now assume React and ReactDOM are available as global objects.
-         We keep type="module" because Firebase imports still require it. -->
-    <script type="module" src="app.js"></script>
+         It will now assume React, ReactDOM, and Firebase are available as global objects.
+         No 'type="module"' needed anymore, which often causes 'SyntaxError: Invalid or unexpected token'. -->
+    <script src="app.js"></script>
 </body>
 </html>
