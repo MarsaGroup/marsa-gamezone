@@ -1,54 +1,15 @@
+/*
+ * This file can be used for any custom CSS rules that are not
+ * covered by Tailwind CSS or for overriding Tailwind defaults.
+ *
+ * Most styling is handled by Tailwind classes directly within the React components.
+ */
+
 body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f4f4f4;
-  color: #333;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh; /* Ensure body takes full viewport height */
 }
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
-h1, h2, h3, h4 {
-  text-align: center;
-  color: #2c3e50;
-}
-button {
-  background: #3498db;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  margin: 10px;
-  cursor: pointer;
-  border-radius: 5px;
-}
-button:hover {
-  background: #2980b9;
-}
-input {
-  padding: 10px;
-  margin: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  width: 200px;
-}
-.product-card {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  padding: 15px;
-  margin: 10px;
-  text-align: center;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-}
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-li {
-  background: #fff;
-  margin: 5px 0;
-  padding: 10px;
-  border-radius: 5px;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-}
+
+/* Add any additional global styles here if needed */
